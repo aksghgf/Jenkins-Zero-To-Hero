@@ -18,18 +18,21 @@ pipeline {
       }
     }
     stage('Static Code Analysis') {
-      agent {
-        docker {
-          image 'maven:3.9-eclipse-temurin-17'
-          args '--user root'
-        }
-      }
       environment {
         SONAR_URL = "http://15.135.140.220:9000"
       }
       steps {
         withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_AUTH_TOKEN')]) {
-          sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && mvn org.sonarsource.scanner.maven:sonar-maven-plugin:3.9.1.2184:sonar -Dsonar.login=$SONAR_AUTH_TOKEN -Dsonar.host.url=${SONAR_URL}'
+          sh '''
+            curl -sL -o /tmp/jdk17.tar.gz "https://api.adoptium.net/v3/binary/latest/17/ga/linux/x64/jdk/hotspot/normal/eclipse?project=jdk"
+            mkdir -p /tmp/jdk17
+            tar -xzf /tmp/jdk17.tar.gz -C /tmp/jdk17 --strip-components=1
+            export JAVA_HOME=/tmp/jdk17
+            export PATH=$JAVA_HOME/bin:$PATH
+            java -version
+            cd java-maven-sonar-argocd-helm-k8s/spring-boot-app
+            mvn org.sonarsource.scanner.maven:sonar-maven-plugin:3.9.1.2184:sonar -Dsonar.login=$SONAR_AUTH_TOKEN -Dsonar.host.url=${SONAR_URL}
+          '''
         }
       }
     }
